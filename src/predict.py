@@ -69,8 +69,16 @@ from wandb.apis import InternalApi
 from dataextraction.python.parse_python_data import tokenize_docstring_from_string
 import model_restore_helper
 
+def make_to_ngram(data):
+    result = []
+    data.insert(0, "<start>")
+    data.append("<end>")
+    for i in range(len(data) - 1):
+        result.append(data[i] + "_" + data[i+1])
+    return result
+
 def query_model(query, model, indices, language, topk=100):
-    query_embedding = model.get_query_representations([{'docstring_tokens': tokenize_docstring_from_string(query),
+    query_embedding = model.get_query_representations([{'docstring_tokens': make_to_ngram(tokenize_docstring_from_string(query)),
                                                         'language': language}])[0]
     idxs, distances = indices.get_nns_by_vector(query_embedding, topk, include_distances=True)
     return idxs, distances
