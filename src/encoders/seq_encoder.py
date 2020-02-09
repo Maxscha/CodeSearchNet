@@ -122,12 +122,8 @@ class SeqEncoder(Encoder):
 
     @classmethod
     def make_to_ngram(cls, data):
-        result = []
-        data.insert(0, "<start>")
-        data.append("<end>")
-        for i in range(len(data) - 1):
-            result.append(data[i] + "_" + data[i+1])
-        return result
+        new_lst = ["<start>", *data, "<end>"]
+        return ["_".join(x) for x in zip(*[new_lst[i:] for i in range(2)])]
 
     @classmethod
     def load_data_from_sample(cls,
