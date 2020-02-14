@@ -3,8 +3,8 @@
 Run predictions on a CodeSearchNet model.
 
 Usage:
-    predict.py -m MODEL_FILE [-p PREDICTIONS_CSV]
-    predict.py -r RUN_ID     [-p PREDICTIONS_CSV]
+    predict.py -m MODEL_FILE [-p PREDICTIONS_CSV] [-l LANGUAGES] [--folder_save] [--no_upload]
+    predict.py -r RUN_ID     [-p PREDICTIONS_CSV] [-l LANGUAGES] [--folder_save] [--no_upload]
     predict.py -h | --help
 
 Options:
@@ -13,6 +13,10 @@ Options:
     -r, --wandb_run_id RUN_ID       wandb run ID, [username]/codesearchnet/[hash string id], viewable from run overview page via info icon
     -p, --predictions_csv FILENAME  CSV filename for model predictions (note: W&B benchmark submission requires the default name)
                                     [default: ../resources/model_predictions.csv]
+    -l, --languages LANGUAGES       Languages to evaluate
+                                    [default: python,go,javascript,java,php,ruby]
+    --folder_save                   Save partial csv to folder
+    --no_upload                     Does not upload csv
 
 Examples:
     ./predict.py -r username/codesearchnet/0123456
@@ -52,6 +56,7 @@ import pickle
 import re
 import shutil
 import sys
+import os
 
 from annoy import AnnoyIndex
 from docopt import docopt
@@ -70,6 +75,9 @@ def query_model(query, model, indices, language, topk=100):
     idxs, distances = indices.get_nns_by_vector(query_embedding, topk, include_distances=True)
     return idxs, distances
 
+def get_csv_path(run, language):
+    run_id = run.split("/")[-1]
+    return '../resources/model_predictions/{}/model_predictions_{}.csv'.format(run_id, language)
 
 if __name__ == '__main__':
     args = docopt(__doc__)
@@ -81,6 +89,9 @@ if __name__ == '__main__':
     args_wandb_run_id = args.get('--wandb_run_id')
     local_model_path = args.get('--model_file')
     predictions_csv = args.get('--predictions_csv')
+    languages = args.get('--languages').split(",")
+    folder_save = args.get('--folder_save')
+    is_upload = not args.get('--no_upload')
 
     if args_wandb_run_id:
         # validate format of runid:
@@ -112,8 +123,14 @@ if __name__ == '__main__':
         is_train=False,
         hyper_overrides={})
     
+    if folder_save:
+        dirName = get_csv_path(run_id, "")
+        if not os.path.exists(dirName):
+            os.makedirs(dirName)
+
     predictions = []
-    for language in ('python', 'go', 'javascript', 'java', 'php', 'ruby'):
+    for language in languages:
+        language_predictions = []
         print("Evaluating language: %s" % language)
         definitions = pickle.load(open('../resources/data/{}_dedupe_definitions_v2.pkl'.format(language), 'rb'))
         indexes = [{'code_tokens': d['function_tokens'], 'language': d['language']} for d in tqdm(definitions)]
@@ -127,13 +144,18 @@ if __name__ == '__main__':
 
         for query in queries:
             for idx, _ in zip(*query_model(query, model, indices, language)):
-                predictions.append((query, language, definitions[idx]['identifier'], definitions[idx]['url']))
+                language_predictions.append((query, language, definitions[idx]['identifier'], definitions[idx]['url']))
+        
+        if folder_save:
+            df = pd.DataFrame(language_predictions, columns=['query', 'language', 'identifier', 'url'])
+            df.to_csv(get_csv_path(run_id, language), index=False)
+        predictions.extend(language_predictions)
 
     df = pd.DataFrame(predictions, columns=['query', 'language', 'identifier', 'url'])
     df.to_csv(predictions_csv, index=False)
 
 
-    if run_id:
+    if run_id and is_upload:
         print('Uploading predictions to W&B')
         # upload model predictions CSV file to W&B
 
