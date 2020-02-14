@@ -12,7 +12,7 @@ from dpu_utils.codeutils import split_identifier_into_parts
 from dpu_utils.mlutils import Vocabulary
 
 from .encoder import Encoder, QueryType
-
+import preprocessing.preprocess as preprocess 
 
 class SeqEncoder(Encoder):
     @classmethod
@@ -96,7 +96,7 @@ class SeqEncoder(Encoder):
                                   use_subtokens: bool=False, mark_subtoken_end: bool=False) -> None:
         if use_subtokens:
             data_to_load = cls._to_subtoken_stream(data_to_load, mark_subtoken_end=mark_subtoken_end)
-        raw_metadata['token_counter'].update(cls.make_to_ngram(data_to_load))
+        raw_metadata['token_counter'].update(cls.preprocess(data_to_load))
 
     @classmethod
     def finalise_metadata(cls, encoder_label: str, hyperparameters: Dict[str, Any], raw_metadata_list: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -121,9 +121,8 @@ class SeqEncoder(Encoder):
         return final_metadata
 
     @classmethod
-    def make_to_ngram(cls, data):
-        new_lst = ["<start>", *data, "<end>"]
-        return ["_".join(x) for x in zip(*[new_lst[i:] for i in range(2)])]
+    def preprocess(cls, data):
+        return preprocess.preprocess(data)
 
     @classmethod
     def load_data_from_sample(cls,
@@ -140,7 +139,7 @@ class SeqEncoder(Encoder):
         Sub-tokenizes, converts, and pads both versions, and rejects empty samples.
         """
 
-        data_to_load = cls.make_to_ngram(data_to_load)
+        data_to_load = cls.preprocess(data_to_load)
 
         # Save the two versions of the code and query:
         data_holder = {QueryType.DOCSTRING.value: data_to_load, QueryType.FUNCTION_NAME.value: None}
