@@ -50,6 +50,7 @@ RUN pip --no-cache-dir install --upgrade \
     jupyter==1.0.0 \
     more_itertools==7.2.0 \
     numpy==1.16.5 \
+    nltk \
     pandas==0.25.0 \
     parso==0.5.1 \
     pygments==2.4.2 \

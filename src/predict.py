@@ -70,9 +70,6 @@ from dataextraction.python.parse_python_data import tokenize_docstring_from_stri
 import model_restore_helper
 import preprocessing.preprocess as preprocess 
 
-def preprocess(data):
-    return preprocess.preprocess(data)
-
 def query_model(query, model, indices, language, topk=100):
     query_embedding = model.get_query_representations([{'docstring_tokens': preprocess.preprocess(tokenize_docstring_from_string(query)),
                                                         'language': language}])[0]
