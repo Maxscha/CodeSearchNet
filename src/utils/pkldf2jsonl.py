@@ -5,7 +5,7 @@ from multiprocessing import Pool, cpu_count
 
 
 def df_to_jsonl(df: pd.DataFrame, RichPath_obj: RichPath, i: int, basefilename='codedata') -> str:
-    dest_filename = f'{basefilename}_{str(i).zfill(5)}.jsonl.gz'
+    dest_filename = f'{basefilename}_{str(i).zfill(2)}.jsonl.gz'
     RichPath_obj.join(dest_filename).save_as_compressed_file(df.to_dict(orient='records'))
     return str(RichPath_obj.join(dest_filename))
 
@@ -13,7 +13,8 @@ def df_to_jsonl(df: pd.DataFrame, RichPath_obj: RichPath, i: int, basefilename='
 def chunked_save_df_to_jsonl(df: pd.DataFrame,
                              output_folder: RichPath,
                              num_chunks: int=None,
-                             parallel: bool=True) -> None:
+                             parallel: bool=True,
+                             basefilename ='codedata') -> None:
     "Chunk DataFrame (n chunks = num cores) and save as jsonl files."
 
     df.reset_index(drop=True, inplace=True)
@@ -24,7 +25,7 @@ def chunked_save_df_to_jsonl(df: pd.DataFrame,
 
     if not parallel:
         for arg in args:
-            dest_filename = df_to_jsonl(*arg)
+            dest_filename = df_to_jsonl(*arg, basefilename=basefilename)
             print(f'Wrote chunk to {dest_filename}')
     else:
         with Pool(cpu_count()) as pool:
